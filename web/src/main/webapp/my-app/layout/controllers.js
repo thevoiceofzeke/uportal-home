@@ -373,7 +373,8 @@ define(['angular', 'jquery'], function(angular, $) {
        */
       vm.init = function() {
         // Check session for any unsaved widget removal
-        if ($sessionStorage.unsavedRemovedFnames.length > 0) {
+        if (!angular.isUndefined($sessionStorage.unsavedRemovedFnames) &&
+          $sessionStorage.unsavedRemovedFnames.length > 0) {
           // If there's something there, we have to save it
           for (var i = 0; i < $sessionStorage.unsavedRemovedFnames.length; i++) {
             saveLayoutRemoval($sessionStorage.unsavedRemovedFnames[i]);
