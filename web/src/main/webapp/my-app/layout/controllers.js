@@ -190,6 +190,12 @@ define(['angular', 'jquery'], function(angular, $) {
           // Remove the widget from layout in scope
           $scope.layout.splice(data.removedIndex, 1);
 
+          // Store info in session in case browser is interrupted
+          // (e.g. refreshed) before undo timeout resolves
+          if (angular.isString(data.removedWidget.fname)) {
+            $sessionStorage.unsavedRemovedFnames.push(data.removedWidget.fname);
+          }
+
           // Dismiss any open toasts (success), then show new one
           // eslint-disable-next-line promise/always-return
           $mdToast.hide().then(function() {
@@ -251,9 +257,13 @@ define(['angular', 'jquery'], function(angular, $) {
           if (response === 'undo') {
             // Add the removed widget back to the layout
             $scope.layout.splice(data.removedIndex, 0, data.removedWidget);
+
+            // Delete session flag for unsaved widget removal
+            var index = $sessionStorage.unsavedRemovedFnames.indexOf(data.removedWidget.fname);
+            $sessionStorage.unsavedRemovedFnames.splice(index, 1);
           } else {
             // Persist changes
-            saveLayoutRemoval(data.removedWidget.fname, data.removedIndex);
+            saveLayoutRemoval(data.removedWidget.fname);
           }
           return response;
         })
@@ -266,17 +276,14 @@ define(['angular', 'jquery'], function(angular, $) {
        * Call layout service to save the removal of the widget from the user's
        * home layout.
        * @param fname {String} The fname of the removed widget
-       * @param index {Number} The index of the removed widget in the layout
        */
-      var saveLayoutRemoval = function(fname, index) {
+      var saveLayoutRemoval = function(fname) {
         // Call layout service to persist change
         layoutService.removeFromHome(fname)
           .success(function() {
-            // Remove from layout in scope
-            // $scope.layout.splice(index, 1);
-
-            // Reset CSS hiding
-            $scope.hideWidgetIndex = null;
+            // Delete session flag for unsaved widget removal
+            var index = $sessionStorage.unsavedRemovedFnames.indexOf(fname);
+            $sessionStorage.unsavedRemovedFnames.splice(index, 1);
 
             // Clear marketplace flag
             if ($sessionStorage.marketplace != null) {
@@ -365,6 +372,15 @@ define(['angular', 'jquery'], function(angular, $) {
        * Initialize expanded mode widget layout
        */
       vm.init = function() {
+        // Check session for any unsaved widget removal
+        if ($sessionStorage.unsavedRemovedFnames.length > 0) {
+          // If there's something there, we have to save it
+          for (var i = 0; i < $sessionStorage.unsavedRemovedFnames.length; i++) {
+            saveLayoutRemoval($sessionStorage.unsavedRemovedFnames[i]);
+          }
+        }
+
+        // Initialize the widget layout
         if (angular.isUndefined($rootScope.layout) ||
         $rootScope.layout == null) {
           $rootScope.layout = [];
@@ -374,7 +390,7 @@ define(['angular', 'jquery'], function(angular, $) {
           layoutService.getLayout().then(function(data) {
             $rootScope.layout = data.layout;
             $scope.layout = data.layout;
-            if (data.layout && data.layout.length == 0) {
+            if (data.layout && data.layout.length === 0) {
               $scope.layoutEmpty = true;
             }
             return data;
