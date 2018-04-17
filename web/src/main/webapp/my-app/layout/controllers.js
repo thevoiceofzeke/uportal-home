@@ -379,6 +379,8 @@ define(['angular', 'jquery'], function(angular, $) {
           for (var i = 0; i < $sessionStorage.unsavedRemovedFnames.length; i++) {
             saveLayoutRemoval($sessionStorage.unsavedRemovedFnames[i]);
           }
+        } else {
+          $sessionStorage.unsavedRemovedFnames = [];
         }
 
         // Initialize the widget layout
